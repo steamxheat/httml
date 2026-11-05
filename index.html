@@ -1,29 +1,84 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Hello, world!</title>
+    <meta name="theme-color" content="#d8ff3f">
+    <title>После полуночи — генератор сигналов</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Unbounded:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+      :root { --ink: #151515; --paper: #f3f0e8; --acid: #d8ff3f; --muted: #726f68; --line: rgba(21, 21, 21, .18); }
       * { box-sizing: border-box; }
-      body {
-        min-height: 100vh;
-        margin: 0;
-        display: grid;
-        place-items: center;
-        background: #111827;
-        color: #f9fafb;
-        font-family: system-ui, sans-serif;
-      }
-      main { max-width: 42rem; padding: 2rem; text-align: center; }
-      h1 { margin: 0; font-size: clamp(3rem, 10vw, 6rem); }
-      p { color: #cbd5e1; font-size: 1.25rem; }
+      html { background: var(--paper); }
+      body { min-height: 100vh; margin: 0; color: var(--ink); background: repeating-linear-gradient(90deg, transparent 0 47px, rgba(21, 21, 21, .045) 48px), var(--paper); font-family: "DM Mono", ui-monospace, monospace; }
+      ::selection { background: var(--acid); color: var(--ink); }
+      button { font: inherit; }
+      :focus-visible { outline: 3px solid var(--acid); outline-offset: 4px; }
+      main { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(440px, .95fr); }
+      .intro { min-height: 100vh; padding: 28px clamp(24px, 5vw, 76px) 34px; display: flex; flex-direction: column; justify-content: space-between; }
+      .topline, .footer, .readout, .signal-label { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+      .topline::before, .signal-label::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--acid); box-shadow: 0 0 0 5px rgba(216, 255, 63, .24); }
+      .topline span:first-child, .signal-label { display: flex; align-items: center; gap: 11px; }
+      .copy { max-width: 790px; padding: 70px 0; }
+      h1 { max-width: 11ch; margin: 0; font-family: "Unbounded", sans-serif; font-size: clamp(42px, 6.1vw, 96px); font-weight: 700; letter-spacing: -.07em; line-height: .98; text-wrap: balance; }
+      .copy p { max-width: 43ch; margin: 32px 0 0; color: #48463f; font-size: clamp(15px, 1.5vw, 19px); line-height: 1.6; }
+      .footer { color: var(--muted); border-top: 1px solid var(--line); padding-top: 15px; }
+      .footer a { color: var(--ink); text-decoration-color: var(--acid); text-underline-offset: 4px; }
+      .station { min-height: 100vh; position: relative; overflow: hidden; padding: 28px clamp(24px, 4vw, 58px) 34px; color: var(--paper); background: var(--ink); display: flex; flex-direction: column; justify-content: space-between; }
+      .station::before { content: ""; position: absolute; inset: 0; opacity: .28; pointer-events: none; background: repeating-linear-gradient(0deg, transparent 0 6px, rgba(243, 240, 232, .15) 7px); }
+      .station > * { position: relative; }
+      .readout { color: #c1beb7; }
+      .readout b { color: var(--acid); font-weight: 400; }
+      .radar { width: min(100%, 480px); aspect-ratio: 1; margin: auto; position: relative; display: grid; place-items: center; }
+      .radar::before, .radar::after, .orbit { content: ""; position: absolute; border: 1px solid rgba(243, 240, 232, .28); border-radius: 50%; }
+      .radar::before { inset: 2%; }
+      .radar::after { inset: 19%; }
+      .orbit { inset: 35%; border-color: var(--acid); }
+      .beam { position: absolute; width: 50%; height: 1px; left: 50%; top: 50%; transform-origin: left center; background: var(--acid); animation: scan 7s cubic-bezier(.45, 0, .15, 1) infinite; }
+      .core { width: 31%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; color: var(--ink); background: var(--acid); font-family: "Unbounded", sans-serif; font-size: clamp(11px, 1.4vw, 17px); letter-spacing: -.06em; text-align: center; z-index: 1; }
+      .coordinates { position: absolute; right: 0; bottom: 5%; padding: 10px 12px; border: 1px solid rgba(243, 240, 232, .35); font-size: 10px; line-height: 1.6; }
+      .controls { display: grid; gap: 18px; }
+      .signal-label { color: var(--acid); justify-content: flex-start; }
+      .message { min-height: 2.2em; margin: 0; font-family: "Unbounded", sans-serif; font-size: clamp(19px, 2.35vw, 37px); font-weight: 600; letter-spacing: -.065em; line-height: 1.1; }
+      .trigger { width: fit-content; display: inline-flex; align-items: center; gap: 22px; padding: 15px 17px 15px 21px; border: 1px solid var(--acid); color: var(--ink); background: var(--acid); cursor: pointer; transition: color .2s ease, background .2s ease, transform .2s ease; }
+      .trigger:hover { color: var(--paper); background: transparent; transform: translateY(-2px); }
+      .trigger:active { transform: translateY(0); }
+      .arrow { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-size: 19px; line-height: 1; }
+      .counter { position: absolute; top: 51%; left: -5px; color: #918f88; font-size: 10px; writing-mode: vertical-rl; }
+      @keyframes scan { to { transform: rotate(360deg); } }
+      @media (max-width: 860px) { main { grid-template-columns: 1fr; } .intro, .station { min-height: auto; } .intro { min-height: 62svh; } .station { min-height: 75svh; } .copy { padding: 80px 0; } .radar { width: min(74vw, 410px); margin: 44px auto; } }
+      @media (max-width: 480px) { .topline, .footer, .readout { font-size: 9px; } .footer span:first-child { max-width: 18ch; } .radar { width: 88vw; } .coordinates { right: -4px; } }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
     </style>
   </head>
   <body>
     <main>
-      <h1>Hello, world!</h1>
-      <p>A tiny website, live on Vercel.</p>
+      <section class="intro" aria-labelledby="title">
+        <div class="topline"><span>Ночная служба сигналов</span><span>Никаких уведомлений</span></div>
+        <div class="copy"><h1 id="title">Слушай, что приходит после полуночи.</h1><p>Небольшой генератор случайных сигналов для тех моментов, когда хочется перестать листать и поймать что-то настоящее.</p></div>
+        <div class="footer"><span>Работает локально, без аккаунта.</span><a href="#receiver">Перейти к приёмнику ↓</a></div>
+      </section>
+      <section class="station" id="receiver" aria-labelledby="receiver-title">
+        <div class="readout"><span>Приёмник 01</span><b id="clock">00:00:00</b></div>
+        <div class="radar" aria-hidden="true"><div class="beam"></div><div class="orbit"></div><div class="core">ON<br>AIR</div><div class="coordinates">55°45′ N<br>37°37′ E</div><div class="counter">№ <span id="counter">001</span></div></div>
+        <div class="controls"><div class="signal-label">Сигнал пойман</div><p class="message" id="receiver-title" aria-live="polite">Тишина — это тоже ответ.</p><button class="trigger" id="trigger" type="button">Поймать следующий <span class="arrow" aria-hidden="true">↗</span></button></div>
+      </section>
     </main>
+    <script>
+      const signals = ["Позвони человеку, о котором подумал.", "Оставь одно окно незакрытым.", "Твоя пауза сейчас — часть маршрута.", "Сделай чай. Остальное подождёт.", "Новый ритм начинается с тишины.", "Завтра станет понятнее, но не спеши."];
+      const message = document.querySelector(".message");
+      const counter = document.querySelector("#counter");
+      const clock = document.querySelector("#clock");
+      let previous = -1;
+      let signalNumber = 1;
+      function updateClock() { clock.textContent = new Intl.DateTimeFormat("ru-RU", { timeStyle: "medium" }).format(new Date()); }
+      function catchSignal() { let next = Math.floor(Math.random() * signals.length); if (signals.length > 1 && next === previous) next = (next + 1) % signals.length; previous = next; signalNumber += 1; message.textContent = signals[next]; counter.textContent = String(signalNumber).padStart(3, "0"); }
+      console.assert(signals.length > 1, "The signal receiver needs at least two messages.");
+      document.querySelector("#trigger").addEventListener("click", catchSignal);
+      updateClock();
+      setInterval(updateClock, 1000);
+    </script>
   </body>
 </html>
